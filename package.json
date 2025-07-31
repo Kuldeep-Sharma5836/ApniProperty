@@ -1,0 +1,27 @@
+{
+  "name": "real-estate-marketplace",
+  "version": "1.0.0",
+  "description": "A full-featured Real Estate Marketplace built with MERN stack and Google Authentication",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd backend && npm run dev",
+    "client": "cd frontend && npm start",
+    "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start"
+  },
+  "keywords": [
+    "real-estate",
+    "mern",
+    "react",
+    "nodejs",
+    "mongodb",
+    "google-auth"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 
