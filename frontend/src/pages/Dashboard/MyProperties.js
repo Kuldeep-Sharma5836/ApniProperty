@@ -1,112 +1,94 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import { useQuery } from 'react-query';
+import { FaPlus, FaEdit, FaTrash, FaRulerCombined, FaParking, FaSeedling, FaHome } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
-import { 
-  FaPlus, FaEdit, FaTrash, FaEye, FaHeart, FaMapMarkerAlt, 
-  FaBed, FaBath, FaDollarSign, FaCalendarAlt, FaFilter,
-  FaSearch, FaHome, FaBuilding, FaRulerCombined
-} from 'react-icons/fa';
 import api from '../../services/api';
 import LoadingSpinner from '../../components/UI/LoadingSpinner';
 
 const MyProperties = () => {
-  const queryClient = useQueryClient();
-  const [filters, setFilters] = useState({
-    search: '',
-    status: '',
-    listingType: '',
-    propertyType: ''
-  });
-  const [showFilters, setShowFilters] = useState(false);
-
   // Fetch user's properties
-  const { data: properties, isLoading, error } = useQuery(
+  const { data: propertiesData, isLoading, error, refetch } = useQuery(
     ['my-properties'],
     async () => {
       const response = await api.get('/api/properties/user/my-properties');
-      return response.data.data;
-    }
-  );
-
-  // Delete property mutation
-  const deletePropertyMutation = useMutation(
-    async (propertyId) => {
-      const response = await api.delete(`/api/properties/${propertyId}`);
       return response.data;
-    },
-    {
-      onSuccess: () => {
-        toast.success('Property deleted successfully!');
-        queryClient.invalidateQueries(['my-properties']);
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to delete property');
-      },
     }
   );
 
-  // Toggle property status mutation
-  const toggleStatusMutation = useMutation(
-    async ({ propertyId, status }) => {
-      const response = await api.patch(`/api/properties/${propertyId}`, { status });
-      return response.data;
-    },
-    {
-      onSuccess: () => {
-        toast.success('Property status updated!');
-        queryClient.invalidateQueries(['my-properties']);
-      },
-      onError: (error) => {
-        toast.error(error.response?.data?.message || 'Failed to update property status');
-      },
-    }
-  );
-
-  const handleDelete = (propertyId, propertyTitle) => {
-    if (window.confirm(`Are you sure you want to delete "${propertyTitle}"?`)) {
-      deletePropertyMutation.mutate(propertyId);
+  const handleDelete = async (propertyId) => {
+    if (window.confirm('Are you sure you want to delete this property?')) {
+      try {
+        await api.delete(`/api/properties/${propertyId}`);
+        toast.success('Property deleted successfully');
+        refetch();
+      } catch (error) {
+        console.error('Delete property error:', error);
+        toast.error('Failed to delete property');
+      }
     }
   };
 
-  const handleStatusToggle = (propertyId, currentStatus) => {
-    const newStatus = currentStatus === 'available' ? 'sold' : 'available';
-    toggleStatusMutation.mutate({ propertyId, status: newStatus });
+  const formatPrice = (price) => {
+    // Convert to Indian Rupees format
+    if (price >= 10000000) {
+      // Convert to crores
+      const crores = (price / 10000000).toFixed(2);
+      return `₹${crores} Crore`;
+    } else if (price >= 100000) {
+      // Convert to lakhs
+      const lakhs = (price / 100000).toFixed(2);
+      return `₹${lakhs} Lakh`;
+    } else {
+      // For smaller amounts, use regular formatting
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(price);
+    }
   };
 
-  const filteredProperties = properties?.filter(property => {
-    const matchesSearch = property.title.toLowerCase().includes(filters.search.toLowerCase()) ||
-                         property.location.city.toLowerCase().includes(filters.search.toLowerCase());
-    const matchesStatus = !filters.status || property.status === filters.status;
-    const matchesListingType = !filters.listingType || property.listingType === filters.listingType;
-    const matchesPropertyType = !filters.propertyType || property.propertyType === filters.propertyType;
-    
-    return matchesSearch && matchesStatus && matchesListingType && matchesPropertyType;
-  });
-
-  const stats = {
-    total: properties?.length || 0,
-    available: properties?.filter(p => p.status === 'available').length || 0,
-    sold: properties?.filter(p => p.status === 'sold').length || 0,
-    totalViews: properties?.reduce((sum, p) => sum + (p.views || 0), 0) || 0
+  const getPropertyTypeLabel = (type) => {
+    const types = {
+      house: 'House',
+      apartment: 'Apartment',
+      condo: 'Condo',
+      villa: 'Villa',
+      land: 'Land',
+      commercial: 'Commercial'
+    };
+    return types[type] || type;
   };
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-secondary-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-secondary-900 mb-2">Error Loading Properties</h2>
+          <p className="text-secondary-600">Please try again later.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-secondary-50">
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center justify-between">
+          <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-secondary-900 mb-2">
                 My Properties
               </h1>
               <p className="text-secondary-600">
-                Manage your property listings and track their performance
+                Manage your listed properties
               </p>
             </div>
-            <Link to="/dashboard/add-property" className="btn-primary">
-              <FaPlus className="w-4 h-4 mr-2" />
+            <Link to="/add-property" className="btn-primary">
+              <FaPlus className="inline mr-2" />
               Add Property
             </Link>
           </div>
@@ -114,295 +96,150 @@ const MyProperties = () => {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-blue-100">
-                <FaHome className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Total Properties</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.total}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-green-100">
-                <FaEye className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Available</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.available}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-red-100">
-                <FaDollarSign className="w-6 h-6 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Sold</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.sold}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="p-3 rounded-lg bg-purple-100">
-                <FaEye className="w-6 h-6 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-secondary-600">Total Views</p>
-                <p className="text-2xl font-bold text-secondary-900">{stats.totalViews}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center space-x-2 text-secondary-600 hover:text-primary-600"
-            >
-              <FaFilter className="w-4 h-4" />
-              <span>Filters</span>
-            </button>
-            <button
-              onClick={() => setFilters({ search: '', status: '', listingType: '', propertyType: '' })}
-              className="text-primary-600 hover:text-primary-700 text-sm"
-            >
-              Clear All
-            </button>
-          </div>
-
-          {showFilters && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">Search</label>
-                <div className="relative">
-                  <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-secondary-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search properties..."
-                    value={filters.search}
-                    onChange={(e) => setFilters({ ...filters, search: e.target.value })}
-                    className="w-full pl-10 pr-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">Status</label>
-                <select
-                  value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                  className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">All Status</option>
-                  <option value="available">Available</option>
-                  <option value="sold">Sold</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">Listing Type</label>
-                <select
-                  value={filters.listingType}
-                  onChange={(e) => setFilters({ ...filters, listingType: e.target.value })}
-                  className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">All Types</option>
-                  <option value="sale">For Sale</option>
-                  <option value="rent">For Rent</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-2">Property Type</label>
-                <select
-                  value={filters.propertyType}
-                  onChange={(e) => setFilters({ ...filters, propertyType: e.target.value })}
-                  className="w-full px-3 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">All Properties</option>
-                  <option value="house">House</option>
-                  <option value="apartment">Apartment</option>
-                  <option value="condo">Condo</option>
-                  <option value="townhouse">Townhouse</option>
-                  <option value="land">Land</option>
-                  <option value="commercial">Commercial</option>
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Properties List */}
         {isLoading ? (
           <div className="flex justify-center py-12">
             <LoadingSpinner size="large" />
           </div>
-        ) : error ? (
+        ) : propertiesData?.data?.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-red-600">Error loading properties. Please try again.</p>
-          </div>
-        ) : filteredProperties?.length === 0 ? (
-          <div className="text-center py-12">
-            <FaHome className="w-16 h-16 text-secondary-400 mx-auto mb-4" />
+            <div className="text-6xl mb-4">🏠</div>
             <h3 className="text-xl font-semibold text-secondary-900 mb-2">
-              {properties?.length === 0 ? 'No properties yet' : 'No properties match your filters'}
+              No properties yet
             </h3>
             <p className="text-secondary-600 mb-6">
-              {properties?.length === 0 
-                ? 'Start by adding your first property listing'
-                : 'Try adjusting your search criteria'
-              }
+              Start by adding your first property to the marketplace.
             </p>
-            {properties?.length === 0 && (
-              <Link to="/dashboard/add-property" className="btn-primary">
+            <Link to="/add-property" className="btn-primary">
+              <FaPlus className="inline mr-2" />
                 Add Your First Property
               </Link>
-            )}
           </div>
         ) : (
           <div className="space-y-6">
-            {filteredProperties.map(property => (
+            {propertiesData?.data?.map(property => (
               <div key={property._id} className="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="p-6">
-                  <div className="flex items-start space-x-6">
-                    {/* Property Image */}
-                    <div className="flex-shrink-0">
-                      <img
-                        src={property.primaryImage || property.images[0]?.url || '/placeholder-property.jpg'}
+                <div className="md:flex">
+                  {/* Image Section */}
+                  <div className="md:w-1/3">
+                    <div className="relative h-64 md:h-full">
+                      {property.images && property.images.length > 0 ? (
+                        <img
+                          src={property.images[0].url}
                         alt={property.title}
-                        className="w-32 h-24 object-cover rounded-lg"
-                      />
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-secondary-200 flex items-center justify-center">
+                          <FaHome className="w-16 h-16 text-secondary-400" />
+                        </div>
+                      )}
+                      <div className="absolute top-3 left-3">
+                        <span className="px-2 py-1 text-xs font-medium bg-white text-secondary-800 rounded-full shadow-sm">
+                          {getPropertyTypeLabel(property.propertyType)}
+                        </span>
+                      </div>
+                    </div>
+                    </div>
+
+                  {/* Content Section */}
+                  <div className="md:w-2/3 p-6">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="text-xl font-semibold text-secondary-900 mb-2">
+                            {property.title}
+                          </h3>
+                        <div className="text-2xl font-bold text-primary-600 mb-3">
+                          {formatPrice(property.price)}
+                        </div>
+                      </div>
+                      <div className="flex space-x-2">
+                          <Link
+                          to={`/edit-property/${property._id}`}
+                          className="bg-primary-100 p-2 rounded-lg hover:bg-primary-200 transition-colors"
+                            title="Edit Property"
+                          >
+                          <FaEdit className="w-4 h-4 text-primary-600" />
+                          </Link>
+                          <button
+                          onClick={() => handleDelete(property._id)}
+                          className="bg-red-100 p-2 rounded-lg hover:bg-red-200 transition-colors"
+                            title="Delete Property"
+                          >
+                          <FaTrash className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
                     </div>
 
                     {/* Property Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-secondary-900 mb-1">
-                            {property.title}
-                          </h3>
-                          <div className="flex items-center text-secondary-600 mb-2">
-                            <FaMapMarkerAlt className="w-4 h-4 mr-1" />
-                            <span className="truncate">
-                              {property.location.city}, {property.location.state}
-                            </span>
-                          </div>
-                          
-                          <div className="flex items-center space-x-4 text-sm text-secondary-600 mb-3">
-                            {property.features?.bedrooms && (
-                              <span className="flex items-center">
-                                <FaBed className="w-4 h-4 mr-1" />
-                                {property.features.bedrooms} beds
-                              </span>
-                            )}
-                            {property.features?.bathrooms && (
-                              <span className="flex items-center">
-                                <FaBath className="w-4 h-4 mr-1" />
-                                {property.features.bathrooms} baths
-                              </span>
-                            )}
-                            {property.features?.squareFeet && (
-                              <span className="flex items-center">
-                                <FaRulerCombined className="w-4 h-4 mr-1" />
-                                {property.features.squareFeet} sq ft
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="flex items-center space-x-4">
-                            <span className="text-lg font-bold text-primary-600">
-                              ${property.price.toLocaleString()}
-                              {property.listingType === 'rent' && '/month'}
-                            </span>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              property.status === 'available' 
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {property.status}
-                            </span>
-                            <span className={`px-2 py-1 text-xs rounded-full ${
-                              property.listingType === 'sale' 
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}>
-                              {property.listingType === 'sale' ? 'For Sale' : 'For Rent'}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center space-x-2 ml-4">
-                          <Link
-                            to={`/properties/${property._id}`}
-                            className="p-2 text-secondary-600 hover:text-primary-600 transition-colors"
-                            title="View Property"
-                          >
-                            <FaEye className="w-4 h-4" />
-                          </Link>
-                          
-                          <Link
-                            to={`/dashboard/edit-property/${property._id}`}
-                            className="p-2 text-secondary-600 hover:text-blue-600 transition-colors"
-                            title="Edit Property"
-                          >
-                            <FaEdit className="w-4 h-4" />
-                          </Link>
-                          
-                          <button
-                            onClick={() => handleStatusToggle(property._id, property.status)}
-                            className={`p-2 rounded-full transition-colors ${
-                              property.status === 'available'
-                                ? 'text-green-600 hover:bg-green-50'
-                                : 'text-orange-600 hover:bg-orange-50'
-                            }`}
-                            title={property.status === 'available' ? 'Mark as Sold' : 'Mark as Available'}
-                          >
-                            <FaDollarSign className="w-4 h-4" />
-                          </button>
-                          
-                          <button
-                            onClick={() => handleDelete(property._id, property.title)}
-                            className="p-2 text-secondary-600 hover:text-red-600 transition-colors"
-                            title="Delete Property"
-                          >
-                            <FaTrash className="w-4 h-4" />
-                          </button>
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div className="flex items-center text-secondary-600">
+                        <FaRulerCombined className="w-4 h-4 mr-2" />
+                        <span>{property.area.toLocaleString()} sqft</span>
                       </div>
 
-                      {/* Additional Info */}
-                      <div className="mt-4 pt-4 border-t border-secondary-200">
-                        <div className="flex items-center justify-between text-sm text-secondary-600">
+                      {/* Facilities */}
                           <div className="flex items-center space-x-4">
-                            <span className="flex items-center">
-                              <FaEye className="w-4 h-4 mr-1" />
-                              {property.views || 0} views
-                            </span>
-                            <span className="flex items-center">
-                              <FaHeart className="w-4 h-4 mr-1" />
-                              {property.favorites?.length || 0} favorites
-                            </span>
+                        {property.facilities.parking && (
+                          <div className="flex items-center text-green-600">
+                            <FaParking className="w-4 h-4 mr-1" />
+                            <span className="text-sm">Parking</span>
                           </div>
-                          <span className="flex items-center">
-                            <FaCalendarAlt className="w-4 h-4 mr-1" />
-                            Listed {new Date(property.createdAt).toLocaleDateString()}
+                        )}
+                        {property.facilities.garden && (
+                          <div className="flex items-center text-green-600">
+                            <FaSeedling className="w-4 h-4 mr-1" />
+                            <span className="text-sm">Garden</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Additional Images */}
+                    {property.images && property.images.length > 1 && (
+                      <div className="mb-4">
+                        <p className="text-sm text-secondary-600 mb-2">Additional Images:</p>
+                        <div className="flex space-x-2">
+                          {property.images.slice(1, 4).map((image, index) => (
+                            <img
+                              key={index}
+                              src={image.url}
+                              alt={`${property.title} ${index + 2}`}
+                              className="w-16 h-16 object-cover rounded-lg border border-secondary-200"
+                            />
+                          ))}
+                          {property.images.length > 4 && (
+                            <div className="w-16 h-16 bg-secondary-100 rounded-lg flex items-center justify-center border border-secondary-200">
+                              <span className="text-xs text-secondary-600">
+                                +{property.images.length - 4}
                           </span>
+                            </div>
+                          )}
                         </div>
                       </div>
+                    )}
+
+                    {/* Action Buttons */}
+                    <div className="flex space-x-3">
+                      <Link
+                        to={`/properties/${property._id}`}
+                        className="btn-primary text-sm"
+                      >
+                        View Details
+                      </Link>
+                      <Link
+                        to={`/edit-property/${property._id}`}
+                        className="btn-secondary text-sm"
+                      >
+                        <FaEdit className="inline mr-1" />
+                        Edit
+                      </Link>
+                    </div>
+
+                    {/* Date Info */}
+                    <div className="mt-4 pt-4 border-t border-secondary-200">
+                      <p className="text-xs text-secondary-500">
+                        Listed on {new Date(property.createdAt).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 </div>

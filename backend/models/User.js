@@ -46,6 +46,43 @@ const userSchema = new mongoose.Schema({
     zipCode: String,
     country: String
   },
+  // Buyer specific fields
+  preferredPropertyType: {
+    type: String,
+    enum: ['house', 'apartment', 'condo', 'villa', 'land', 'commercial'],
+    default: undefined
+  },
+  budgetRange: {
+    type: String,
+    enum: ['under-10lakh', '10lakh-25lakh', '25lakh-50lakh', '50lakh-1crore', '1crore-2crore', 'over-2crore'],
+    default: undefined
+  },
+  preferredLocation: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Location cannot be more than 100 characters']
+  },
+  // Seller specific fields
+  companyName: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Company name cannot be more than 100 characters']
+  },
+  licenseNumber: {
+    type: String,
+    trim: true,
+    maxlength: [50, 'License number cannot be more than 50 characters']
+  },
+  experience: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'experienced', 'expert'],
+    default: undefined
+  },
+  specialization: {
+    type: String,
+    trim: true,
+    maxlength: [100, 'Specialization cannot be more than 100 characters']
+  },
   isVerified: {
     type: Boolean,
     default: false

@@ -10,6 +10,7 @@ const Register = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [registerError, setRegisterError] = useState("");
 
   const {
     register,
@@ -22,12 +23,27 @@ const Register = () => {
 
   const onSubmit = async (data) => {
     setIsLoading(true);
+    setRegisterError("");
+    // Ensure role is always set
+    if (!data.role) {
+      data.role = "buyer";
+    }
+    // Remove only problematic enum fields if empty, undefined, or null
+    const cleanedData = { ...data };
+    ["preferredPropertyType", "budgetRange", "experience"].forEach(key => {
+      if (cleanedData[key] === "" || cleanedData[key] === undefined || cleanedData[key] === null) {
+        delete cleanedData[key];
+      }
+    });
     try {
-      const result = await registerUser(data);
+      const result = await registerUser(cleanedData);
       if (result.success) {
         navigate('/dashboard');
+      } else {
+        setRegisterError(result.message || "Registration failed");
       }
     } catch (error) {
+      setRegisterError("Registration error. Please try again.");
       console.error('Registration error:', error);
     } finally {
       setIsLoading(false);
@@ -60,6 +76,9 @@ const Register = () => {
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+          {registerError && (
+            <div className="form-error text-center mb-2">{registerError}</div>
+          )}
           <div className="space-y-4">
             <div>
               <label htmlFor="name" className="form-label">
@@ -170,12 +189,10 @@ const Register = () => {
               </label>
               <select
                 id="role"
-                {...register('role', {
-                  required: 'Please select your role',
-                })}
+                {...register('role')}
                 className={`input-field ${errors.role ? 'border-red-500' : ''}`}
+                defaultValue="buyer"
               >
-                <option value="">Select your role</option>
                 <option value="buyer">Buy properties</option>
                 <option value="seller">Sell properties</option>
               </select>

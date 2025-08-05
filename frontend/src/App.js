@@ -7,12 +7,10 @@ import Properties from './pages/Properties';
 import PropertyDetail from './pages/PropertyDetail';
 import Login from './pages/Auth/Login';
 import Register from './pages/Auth/Register';
-import Dashboard from './pages/Dashboard/Dashboard';
 import AddProperty from './pages/Dashboard/AddProperty';
-import EditProperty from './pages/Dashboard/EditProperty';
 import MyProperties from './pages/Dashboard/MyProperties';
-import Favorites from './pages/Dashboard/Favorites';
-import Profile from './pages/Dashboard/Profile';
+import Dashboard from './pages/Dashboard/Dashboard';
+import Profile from './pages/Profile';
 import AuthSuccess from './pages/Auth/AuthSuccess';
 import ProtectedRoute from './components/Auth/ProtectedRoute';
 import LoadingSpinner from './components/UI/LoadingSpinner';
@@ -45,27 +43,17 @@ function App() {
             <Dashboard />
           </ProtectedRoute>
         } />
-        <Route path="/dashboard/add-property" element={
+        <Route path="/add-property" element={
           <ProtectedRoute>
             <AddProperty />
           </ProtectedRoute>
         } />
-        <Route path="/dashboard/edit-property/:id" element={
-          <ProtectedRoute>
-            <EditProperty />
-          </ProtectedRoute>
-        } />
-        <Route path="/dashboard/my-properties" element={
+        <Route path="/my-properties" element={
           <ProtectedRoute>
             <MyProperties />
           </ProtectedRoute>
         } />
-        <Route path="/dashboard/favorites" element={
-          <ProtectedRoute>
-            <Favorites />
-          </ProtectedRoute>
-        } />
-        <Route path="/dashboard/profile" element={
+        <Route path="/profile" element={
           <ProtectedRoute>
             <Profile />
           </ProtectedRoute>
